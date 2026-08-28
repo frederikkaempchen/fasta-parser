@@ -5,6 +5,15 @@ const Allocator = std.mem.Allocator;
 pub const Read = struct {
     header: Header,
     sequence: Sequence,
+
+    /// parses sequence buffer and appends bases to sequence
+    pub fn appendSequenceBuffer(self: *Read, gpa: Allocator, buffer: []u8) (Allocator.Error || error{InvalidSequence})!void {
+        try self.sequence.ensureUnusedCapacity(gpa, buffer.len);
+        for (buffer) |el| {
+            if (el == '\n') continue;
+            if (is_base[el]) self.sequence.appendAssumeCapacity(el) else return error.InvalidSequence;
+        }
+    }
 };
 
 pub const Header = std.ArrayList(u8);
@@ -19,14 +28,6 @@ const is_base: [256]bool = blk: {
     break :blk table;
 };
 
-pub fn appendSeq(seq: *Sequence, gpa: Allocator, buffer: []u8) (Allocator.Error || error{InvalidSequence})!void {
-    try seq.ensureUnusedCapacity(gpa, buffer.len);
-    for (buffer) |el| {
-        if (el == '\n') continue;
-        if (is_base[el]) seq.appendAssumeCapacity(el) else return error.InvalidSequence;
-    }
-}
-
 pub const FastaParseError = error{
     EmptyFile,
     InvalidHeader,
@@ -34,23 +35,23 @@ pub const FastaParseError = error{
     InvalidSequence,
 };
 
-pub fn parseFasta(reader: *Reader, gpa: Allocator) (Allocator.Error || Reader.Error || FastaParseError)!std.ArrayList(Read) {
-    var reads: std.ArrayList(Read) = try .initCapacity(gpa, 0);
-    errdefer reads.deinit(gpa);
-    var current_read: Read = undefined;
+pub const FastaParser = struct {
+    reader: *Reader,
 
-    if (reader.bufferedLen() == 0) {
-        reader.fillMore() catch |err| switch (err) {
-            error.EndOfStream => return error.EmptyFile,
-            else => return err,
-        };
+    pub fn iterate(reader: *Reader) FastaParser {
+        return .{ .reader = reader };
     }
 
-    // while file not empty
-    while (true) {
-        current_read = .{ .header = try .initCapacity(gpa, 0), .sequence = try .initCapacity(gpa, 0) };
+    pub fn next(self: *FastaParser, gpa: Allocator) (Allocator.Error || Reader.Error || FastaParseError)!Read {
+        var current_read: Read = .{ .header = try .initCapacity(gpa, 0), .sequence = try .initCapacity(gpa, 0) };
         errdefer current_read.header.deinit(gpa);
         errdefer current_read.sequence.deinit(gpa);
+
+        var reader = self.reader;
+
+        if (reader.bufferedLen() == 0) {
+            try reader.fillMore();
+        }
 
         if (reader.buffered()[0] != '>') return error.InvalidHeader;
         reader.toss(1);
@@ -82,22 +83,33 @@ pub fn parseFasta(reader: *Reader, gpa: Allocator) (Allocator.Error || Reader.Er
             const maybe_idx = std.mem.findScalar(u8, buf, '>');
 
             if (maybe_idx == null) {
-                try appendSeq(&current_read.sequence, gpa, buf);
+                try current_read.appendSequenceBuffer(gpa, buf);
                 reader.tossBuffered();
                 reader.fillMore() catch |err| switch (err) {
-                    error.EndOfStream => { // EOS only occurs when fillMore filled zero bytes
-                        try reads.append(gpa, current_read);
-                        return reads;
-                    },
+                    error.EndOfStream => break, // EOS only occurs when fillMore filled zero bytes
                     else => return err,
                 };
                 buf = reader.buffered();
             } else {
-                try appendSeq(&current_read.sequence, gpa, buf[0..maybe_idx.?]);
+                try current_read.appendSequenceBuffer(gpa, buf[0..maybe_idx.?]);
                 reader.toss(maybe_idx.?); // don't toss '>' - needed for validation in next iter
                 break;
             }
         }
+        return current_read;
+    }
+};
+
+pub fn parseFasta(reader: *Reader, gpa: Allocator) (Allocator.Error || Reader.Error || FastaParseError)!std.ArrayList(Read) {
+    var reads: std.ArrayList(Read) = try .initCapacity(gpa, 0);
+    errdefer reads.deinit(gpa);
+
+    var fasta_reader = FastaParser.iterate(reader);
+    while (true) {
+        const current_read = fasta_reader.next(gpa) catch |err| switch (err) {
+            error.EndOfStream => return reads,
+            else => return err,
+        };
         try reads.append(gpa, current_read);
     }
 }

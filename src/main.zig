@@ -1,7 +1,7 @@
 const std = @import("std");
 const Io = std.Io;
 
-const fasta_parser = @import("parser.zig");
+const fasta_parser = @import("root.zig");
 const parseFasta = fasta_parser.parseFasta;
 const Read = fasta_parser.Read;
 const Header = fasta_parser.Header;
