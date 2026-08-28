@@ -23,7 +23,8 @@ pub fn build(b: *std.Build) void {
 fn addExamples(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, root: *std.Build.Module) void {
     // list all examples here
     const examples = [_]struct { name: []const u8, file: []const u8 }{
-        .{ .name = "test", .file = "examples/main.zig" },
+        .{ .name = "comptime_file", .file = "examples/embed_file_comptime.zig" },
+        .{ .name = "runtime_read", .file = "examples/read_at_runtime.zig" },
     };
 
     const build_all_step = b.step("examples", "Build all examples");

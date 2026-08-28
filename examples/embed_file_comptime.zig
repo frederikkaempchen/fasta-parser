@@ -9,29 +9,17 @@ pub fn main(init: std.process.Init) !void {
     const arena: std.mem.Allocator = init.arena.allocator();
     const io = init.io;
 
-    const cwd = std.Io.Dir.cwd();
-    const file_sub_path = "examples/test.fasta";
+    const file_sub_path = "./test.fasta";
+    const embedded = @embedFile(file_sub_path);
+    var fr = Io.Reader.fixed(embedded[0 .. embedded.len - 1]);
 
-    const file = try cwd.openFile(io, file_sub_path, .{ .mode = .read_only });
-    defer file.close(io);
-
-    var file_path: [1024]u8 = undefined;
-
-    const file_path_size = try file.realPath(io, &file_path);
-    std.debug.print("reading file: {s}\n\n", .{file_path[0..file_path_size]});
-
-    // create file reader with adequately sized buffer - smaller buffer means more syscalls for filling that buffer
-    // (and for longer sequences also more allocation syscalls)
-    const buffer = try arena.alloc(u8, 4096);
-    defer arena.free(buffer);
-    var fr = file.reader(io, buffer);
+    std.debug.print("reading file examples/test.fasta - but not really, the file is embedded as array into the binary of this example at compile time :)\n\n", .{});
 
     const clk: Io.Clock = .real; // wallclock
-
     const t1: std.Io.Timestamp = .now(io, clk);
 
     // read all reads (a read is header + sequence) into an ArrayList of Reads allocated on the heap
-    const reads = try parseFasta(&fr.interface, arena);
+    const reads = try parseFasta(&fr, arena);
 
     const t2: std.Io.Timestamp = .now(io, clk);
 
