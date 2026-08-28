@@ -1,1 +1,0 @@
-- add iterator api for max size partial Reads
