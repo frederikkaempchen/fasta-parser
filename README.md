@@ -28,6 +28,5 @@ the example times on my pc: 0.112s vs 0.006 - not a great benchmark as it is a t
 ## TODO
 - [ ] lowercase
 - [ ] full IUPAC base alphabet
-- [ ] compression (only 4 bits needed for full IUPAC alphabet)
 - [ ] partial reads iterator api that guarantees a maximum of allocations for each next function call
 - [ ] comptime Reads with known sequence size and header size through `@embedFile`

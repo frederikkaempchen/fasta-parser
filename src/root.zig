@@ -4,35 +4,78 @@ const Allocator = std.mem.Allocator;
 
 pub const Read = struct {
     header: Header,
-    sequence: Sequence,
+    sequence: NucSequence,
 
     /// parses sequence buffer and appends bases to sequence
-    pub fn appendSequenceBuffer(self: *Read, gpa: Allocator, buffer: []u8) (Allocator.Error || error{InvalidSequence})!void {
-        try self.sequence.ensureUnusedCapacity(gpa, buffer.len);
-        for (buffer) |el| {
-            if (el == '\n') continue;
-            if (is_base[el]) self.sequence.appendAssumeCapacity(el) else return error.InvalidSequence;
-        }
+    pub fn appendSequenceBuffer(self: *Read, gpa: Allocator, buffer: []u8) (Allocator.Error || error{InvalidCharacter})!void {
+        try self.sequence.appendBuffer(gpa, buffer);
     }
 };
 
 pub const Header = std.ArrayList(u8);
 
-pub const Sequence = std.ArrayList(u8);
+pub const Base = enum(u4) {
+    A = 0,
+    C = 1,
+    T = 2,
+    G = 3,
+    N = 4,
 
-pub const Base: [5]u8 = .{ 'A', 'C', 'T', 'G', 'N' };
+    const chars: [5]u8 = .{ 'A', 'C', 'T', 'G', 'N' };
 
-const is_base: [256]bool = blk: {
-    var table: [256]bool = .{false} ** 256;
-    for (Base) |b| table[b] = true;
-    break :blk table;
+    pub fn fromChar(char: u8) error{InvalidCharacter}!Base {
+        const lookup: [256]?Base = comptime blk: {
+            var table: [256]?Base = .{null} ** 256;
+            for (chars, 0..) |c, i| {
+                table[c] = @enumFromInt(i);
+            }
+            break :blk table;
+        };
+        return lookup[char] orelse error.InvalidCharacter;
+    }
+
+    pub fn intoChar(elem: Base) u8 {
+        return chars[@intFromEnum(elem)];
+    }
 };
+
+pub fn Sequence(comptime T: type) type {
+    return struct {
+        sequence: std.ArrayList(T),
+
+        const Self = @This();
+
+        pub fn fromString(gpa: Allocator, sequence: []const u8, fromChar: fn (u8) error{InvalidCharacter}!T) !Self {
+            var bases: std.ArrayList(Base) = try .initCapacity(gpa, sequence.len);
+
+            for (sequence) |elem| {
+                bases.appendAssumeCapacity(try fromChar(elem));
+            }
+
+            return .{ .sequence = bases };
+        }
+
+        pub fn appendBuffer(self: *Self, gpa: Allocator, buffer: []u8) (Allocator.Error || error{InvalidCharacter})!void {
+            try self.sequence.ensureUnusedCapacity(gpa, buffer.len);
+            for (buffer) |el| {
+                if (el == '\n') continue;
+                self.sequence.appendAssumeCapacity(try Base.fromChar(el));
+            }
+        }
+
+        pub fn deinit(self: *Self, gpa: Allocator) void {
+            self.sequence.deinit(gpa);
+        }
+    };
+}
+
+pub const NucSequence = Sequence(Base);
 
 pub const FastaParseError = error{
     EmptyFile,
     InvalidHeader,
     HeaderWithoutSequence,
-    InvalidSequence,
+    InvalidCharacter,
 };
 
 pub const FastaParser = struct {
@@ -43,7 +86,7 @@ pub const FastaParser = struct {
     }
 
     pub fn next(self: *FastaParser, gpa: Allocator) (Allocator.Error || Reader.Error || FastaParseError)!Read {
-        var current_read: Read = .{ .header = try .initCapacity(gpa, 0), .sequence = try .initCapacity(gpa, 0) };
+        var current_read: Read = .{ .header = try .initCapacity(gpa, 0), .sequence = .{ .sequence = .empty } };
         errdefer current_read.header.deinit(gpa);
         errdefer current_read.sequence.deinit(gpa);
 
