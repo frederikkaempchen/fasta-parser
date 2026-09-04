@@ -14,7 +14,7 @@ pub const Read = struct {
 
 pub const Header = std.ArrayList(u8);
 
-pub const Base = enum(u4) {
+pub const Base = enum(u3) {
     A = 0,
     C = 1,
     T = 2,
