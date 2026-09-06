@@ -4,14 +4,14 @@ const Io = std.Io;
 const fasta_parser = @import("fasta_parser");
 const parseFasta = fasta_parser.parseFasta;
 const Read = fasta_parser.Read;
-const Base = fasta_parser.Base;
+const AminoAcid = fasta_parser.AminoAcid;
 
 pub fn main(init: std.process.Init) !void {
     const arena: std.mem.Allocator = init.arena.allocator();
     const io = init.io;
 
     const cwd = std.Io.Dir.cwd();
-    const file_sub_path = "./examples/test.fasta";
+    const file_sub_path = "./examples/proteins_p1.fasta";
 
     const file = try cwd.openFile(io, file_sub_path, .{ .mode = .read_only });
     defer file.close(io);
@@ -32,7 +32,7 @@ pub fn main(init: std.process.Init) !void {
     const t1: std.Io.Timestamp = .now(io, clk);
 
     // read all reads (a read is header + sequence) into an ArrayList of Reads allocated on the heap
-    const reads = try parseFasta(&fr.interface, arena, Base);
+    const reads = try parseFasta(&fr.interface, arena, AminoAcid);
 
     const t2: std.Io.Timestamp = .now(io, clk);
 

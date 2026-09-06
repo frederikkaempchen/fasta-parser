@@ -4,6 +4,7 @@ const Io = std.Io;
 const fasta_parser = @import("fasta_parser");
 const parseFasta = fasta_parser.parseFasta;
 const Read = fasta_parser.Read;
+const Base = fasta_parser.Base;
 
 pub fn main(init: std.process.Init) !void {
     const arena: std.mem.Allocator = init.arena.allocator();
@@ -19,7 +20,7 @@ pub fn main(init: std.process.Init) !void {
     const t1: std.Io.Timestamp = .now(io, clk);
 
     // read all reads (a read is header + sequence) into an ArrayList of Reads allocated on the heap
-    const reads = try parseFasta(&fr, arena);
+    const reads = try parseFasta(&fr, arena, Base);
 
     const t2: std.Io.Timestamp = .now(io, clk);
 

@@ -25,6 +25,7 @@ fn addExamples(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
     const examples = [_]struct { name: []const u8, file: []const u8 }{
         .{ .name = "comptime_file", .file = "examples/embed_file_comptime.zig" },
         .{ .name = "runtime_read", .file = "examples/read_at_runtime.zig" },
+        .{ .name = "protein_db", .file = "examples/parse_protein_db.zig" },
     };
 
     const build_all_step = b.step("examples", "Build all examples");
