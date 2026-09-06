@@ -3,7 +3,12 @@
     .version = "0.0.0",
     .fingerprint = 0xca7db196e57b5f34,
     .minimum_zig_version = "0.16.0",
-    .dependencies = .{},
+    .dependencies = .{
+        .alphabet = .{
+            .url = "git+https://github.com/frederikkaempchen/alphabet#d0f15b14d07e7acd333116120269026612baf963",
+            .hash = "alphabet-0.0.0-dv9CZGEgAADZ-T_3oXBxZRQcGiMVPIW4MVO4Kgs4LD6c",
+        },
+    },
     .paths = .{
         "build.zig",
         "build.zig.zon",

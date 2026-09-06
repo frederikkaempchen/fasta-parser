@@ -3,10 +3,13 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const mod = b.addModule("fasta_parser", .{
-        .root_source_file = b.path("src/root.zig"),
-        .target = target,
-    });
+
+    const alphabet_dep = b.dependency("alphabet", .{ .target = target, .optimize = optimize });
+    const alphabet_mod = alphabet_dep.module("alphabet");
+
+    const mod = b.addModule("fasta_parser", .{ .root_source_file = b.path("src/root.zig"), .target = target, .imports = &.{
+        .{ .name = "alphabet", .module = alphabet_mod },
+    } });
 
     const mod_tests = b.addTest(.{
         .root_module = mod,

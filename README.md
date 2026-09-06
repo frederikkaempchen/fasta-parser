@@ -15,11 +15,12 @@ pub const Header = std.ArrayList(u8);
 pub fn Sequence(comptime T: type) type
 ```
 ## T is an Alphabet
-one can create an own alphabet thus:
+I kept the alphabet implementation in a seperate library - [check it out here](https://github.com/frederikkaempchen/alphabet).
+Basically one can use it to create a an enum over symbols of an alphabet by just by passing a string into a comptime function "Alphabet".
+
 ```zig
-const MyAlphabet = Alphabet("ABCDEFG");
+const Base = Alphabet("ACTGN");
 ```
-the elements in the string are the symbols of the alphabet and must be unique.
 
 ## two ways to use the library:
 
