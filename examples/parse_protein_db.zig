@@ -41,7 +41,7 @@ pub fn main(init: std.process.Init) !void {
     for (reads.items) |read| {
         std.debug.print("{s}\n", .{read.header.items});
         for (read.sequence.sequence.items) |el| {
-            std.debug.print("{c}", .{el.intoChar()});
+            std.debug.print("{c}", .{AminoAcid.intoChar(el)});
         }
         std.debug.print("\n\n", .{});
     }

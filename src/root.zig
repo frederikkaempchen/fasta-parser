@@ -1,7 +1,66 @@
 const std = @import("std");
 const Reader = std.Io.Reader;
 const Allocator = std.mem.Allocator;
+const Type = std.builtin.Type;
+const Enum = Type.Enum;
+const EnumField = Type.EnumField;
+fn validateAlphabet(comptime symbols: []const u8) void {
+    const size = symbols.len;
+    if (size == 0) @compileError("alphabet cannot be empty");
 
+    for (symbols, 0..) |c, i| {
+        for (symbols[i + 1 ..], i + 1..) |d, j| {
+            if (c == d)
+                @compileError(std.fmt.comptimePrint(
+                    "Duplicate character at indices {} and {}.",
+                    .{ i, j },
+                ));
+        }
+    }
+}
+
+pub fn Alphabet(comptime symbols: []const u8) type {
+    validateAlphabet(symbols);
+
+    const size = symbols.len;
+
+    const TagInt = @Int(.unsigned, std.math.log2_int_ceil(usize, size)); // size <= 2^tag_type.bits
+
+    const field_names: [size][]const u8 = blk: {
+        var res: [size][]const u8 = undefined;
+        for (symbols, 0..) |elem, i| {
+            res[i] = &.{elem};
+        }
+        break :blk res;
+    };
+
+    const field_values: [size]TagInt = blk: {
+        var res: [size]TagInt = undefined;
+        for (res, 0..) |_, i| {
+            res[i] = i;
+        }
+        break :blk res;
+    };
+
+    // - fromChar, intoChar - both based on a table lookup and symbols
+
+    return struct {
+        pub const Symbol: type = @Enum(TagInt, .exhaustive, &field_names, &field_values);
+
+        const Self = @This();
+
+        pub fn intoChar(symbol: Symbol) u8 {
+            return symbols[@intFromEnum(symbol)];
+        }
+
+        pub fn fromChar(char: u8) error{InvalidCharacter}!Symbol {
+            inline for (symbols, 0..) |elem, i| {
+                if (char == elem) return @enumFromInt(i);
+            }
+            return error.InvalidCharacter;
+        }
+    };
+}
 /// T is the element type of the sequence - Base and AminoAcid are implemented
 pub fn Read(comptime T: type) type {
     return struct {
@@ -19,89 +78,18 @@ pub fn Read(comptime T: type) type {
 
 pub const Header = std.ArrayList(u8);
 
-pub const Base = enum(u3) {
-    A = 0,
-    C = 1,
-    T = 2,
-    G = 3,
-    N = 4,
+pub const Base = Alphabet("ACTGN");
 
-    const chars: [5]u8 = .{ 'A', 'C', 'T', 'G', 'N' };
-
-    pub fn fromChar(char: u8) error{InvalidCharacter}!Base {
-        const lookup: [256]?Base = comptime blk: {
-            var table: [256]?Base = .{null} ** 256;
-            for (chars, 0..) |c, i| {
-                table[c] = @enumFromInt(i);
-            }
-            break :blk table;
-        };
-        return lookup[char] orelse error.InvalidCharacter;
-    }
-
-    pub fn intoChar(elem: Base) u8 {
-        return chars[@intFromEnum(elem)];
-    }
-};
-
-pub const AminoAcid = enum(u5) {
-    M = 0,
-    S = 1,
-    E = 2,
-    K = 3,
-    I = 4,
-    W = 5,
-    V = 6,
-    L = 7,
-    A = 8,
-    Q = 9,
-    Y = 10,
-    T = 11,
-    F = 12,
-    G = 13,
-    P = 14,
-    N = 15,
-    R = 16,
-    D = 17,
-    H = 18,
-    C = 19,
-    U = 20,
-
-    const chars: [21]u8 = .{
-        'M', 'S', 'E', 'K', 'I',
-        'W', 'V', 'L', 'A', 'Q',
-        'Y', 'T', 'F', 'G', 'P',
-        'N', 'R', 'D', 'H', 'C',
-        'U',
-    };
-
-    pub fn fromChar(char: u8) error{InvalidCharacter}!AminoAcid {
-        const lookup: [256]?AminoAcid = comptime blk: {
-            var table: [256]?AminoAcid = .{null} ** 256;
-
-            for (chars, 0..) |c, i| {
-                table[c] = @enumFromInt(i);
-            }
-
-            break :blk table;
-        };
-
-        return lookup[char] orelse error.InvalidCharacter;
-    }
-
-    pub fn intoChar(elem: AminoAcid) u8 {
-        return chars[@intFromEnum(elem)];
-    }
-};
+pub const AminoAcid = Alphabet("MSEKIWVLAQYTFGPNRDHCU");
 
 pub fn Sequence(comptime T: type) type {
     return struct {
-        sequence: std.ArrayList(T),
+        sequence: std.ArrayList(T.Symbol),
 
         const Self = @This();
 
         pub fn fromString(gpa: Allocator, sequence: []const u8, fromChar: fn (u8) error{InvalidCharacter}!T) !Self {
-            var bases: std.ArrayList(T) = try .initCapacity(gpa, sequence.len);
+            var bases: std.ArrayList(T.Symbol) = try .initCapacity(gpa, sequence.len);
 
             for (sequence) |elem| {
                 bases.appendAssumeCapacity(try fromChar(elem));
