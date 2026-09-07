@@ -44,7 +44,10 @@ pub fn Sequence(comptime T: type) type {
             try self.sequence.ensureUnusedCapacity(gpa, buffer.len);
             for (buffer) |el| {
                 if (el == '\n') continue;
-                self.sequence.appendAssumeCapacity(try T.fromChar(el));
+                self.sequence.appendAssumeCapacity(T.fromChar(el) catch |err| {
+                    std.log.err("invalid character: {c}\n", .{el});
+                    return err;
+                });
             }
         }
 
