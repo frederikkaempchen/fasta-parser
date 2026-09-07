@@ -97,7 +97,8 @@ pub fn FastaParser(comptime T: type) type {
 
             // parse header
             while (true) {
-                const maybe_idx = std.mem.findScalar(u8, buf, '\n');
+                const linebreaks: [2]u8 = .{ '\n', '\r' };
+                const maybe_idx = std.mem.findAny(u8, buf, linebreaks[0..]);
 
                 if (maybe_idx == null) {
                     try current_read.header.appendSlice(gpa, buf);
