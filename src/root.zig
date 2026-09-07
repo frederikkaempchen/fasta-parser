@@ -43,7 +43,7 @@ pub fn Sequence(comptime T: type) type {
         pub fn appendBuffer(self: *Self, gpa: Allocator, buffer: []u8) (Allocator.Error || error{InvalidCharacter})!void {
             try self.sequence.ensureUnusedCapacity(gpa, buffer.len);
             for (buffer) |el| {
-                if (el == '\n') continue;
+                if (el == '\n' or el == '\r') continue;
                 self.sequence.appendAssumeCapacity(T.fromChar(el) catch |err| {
                     std.log.err("invalid character: 0x{x}\n", .{el});
                     return err;
