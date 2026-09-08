@@ -5,8 +5,8 @@
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .alphabet = .{
-            .url = "git+https://github.com/frederikkaempchen/alphabet#051c5bd4210d743bbf2ca0c7107a79fae1cc5a32",
-            .hash = "alphabet-0.0.0-dv9CZPsoAAD6IPXJkADiUG0RfV8gkwoHcun3ZMGP_fI0",
+            .url = "git+https://github.com/frederikkaempchen/alphabet#3517169584d023be4969820b765b3e32912504a1",
+            .hash = "alphabet-0.0.0-dv9CZDYsAAAcQC0XKcEz_D3szv2E7HW1DiEN5nKOqloc",
         },
     },
     .paths = .{
